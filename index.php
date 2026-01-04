@@ -29,7 +29,7 @@ $start_from = ($pn-1) * $limit;
 $mufaj_filter =[];
 if(!empty($_GET['mufaj'])){
     $mufaj = mysqli_real_escape_string($con, $_GET['mufaj']);
-    $mufaj_filter[] = " mufaj LIKE '%$mufaj%' ";
+    $mufaj_filter[] = "mufaj LIKE '%$mufaj%' ";
 }
 
 $order_by = "";
@@ -49,7 +49,15 @@ if(count($mufaj_filter)>0){
 
 $sql = "SELECT * from filmek $eredmenysql $order_by LIMIT $start_from, $limit";
 $result = $con ->query($sql);
+
+$account_loggedin = isset($_SESSION['account_loggedin']) && $_SESSION['account_loggedin'] === true;
+
+
+
 ?>
+
+
+
 
 <!DOCTYPE html>
 <html lang="en">
@@ -64,13 +72,25 @@ $result = $con ->query($sql);
 <body>
 <nav class="navbar navbar-expand-lg bg-body-tertiary">
   <div class="container-fluid">
-    <a class="navbar-brand">Asd</a>
-        <div class="search" id="search">
-            <input type="text" class="input" id="input" placeholder="Search...">
+    <a class="navbar-brand">Filmuniverzum</a>
+    <div class="d-flex align-items-center ms-auto gap-3">
+        <div class="search position-relative" id="search">
+            <input type="text" class="input" id="searchInput" placeholder="Search...">
+            <div id="searchResults" class="list-group position-absolute w-100 mt-1" style="z-index: 1000;top: 100%;"></div>
             <button class="btn" id="btn">
                 <ion-icon name="search-outline"></ion-icon>
-          </button>
+            </button>
         </div>
+        <?php if(!$account_loggedin): ?>
+        <a href="phplogin/login.php" class="btn ">
+          Bejelentkezés
+        </a>
+      <?php else: ?>
+        <a href="phplogin/logout.php" class="btn ">
+          Kijelentkezés
+        </a>
+      <?php endif; ?>
+  </div>
   </div>
 </nav>
 
@@ -130,10 +150,8 @@ echo '</section>';
                     <option value="háborús" <?php if(isset($_GET['mufaj'])&& $_GET['mufaj'] == 'háborús') echo 'selected'?>>Háborús</option>
                     <option value="romantikus" <?php if(isset($_GET['mufaj'])&& $_GET['mufaj'] == 'romantikus') echo 'selected'?>>Romantikus</option>
                 </select>
-            </form>
         </div>
         <div class="mufaj-dropdown col-sm-6">
-            <form action="" method="GET">
                 <select name="rendezes" onchange="this.form.submit()">
                     <option value="">Rendezés</option>
                     <option value="csokkeno" <?php if(isset($_GET['rendezes']) && $_GET['rendezes'] == "csokkeno") echo 'selected' ?>>Nézettség alapján csökkenő</option>
@@ -151,11 +169,14 @@ echo '</section>';
         while($row = $result->fetch_assoc()) {
         ?>
         <div class="col-md-3 mb-4 d-flex justify-content-center">
-            <div class="card " style="width: 18rem;">
-                <img src="<?php echo $row['cover_url']; ?>" class="card-img-top" alt="<?php echo $row['cim']; ?>">
-                <div class="card-body">
-                    <h5 class="card-title"><?php echo ($row['cim'])?></h5>
-                </div>
+            <div class="card" style="width: 18rem; cursor:pointer;" onclick="window.location='filmadatlap.php?id=<?php echo $row['id']; ?>'">
+                <a href="filmadatlap.php?id=<?php echo $row['id']; ?>" class="text-decoration-none text-dark">
+                    <img src="<?php echo $row['cover_url']; ?>" class="card-img-top" alt="<?php echo $row['cim']; ?>">
+                    <div class="card-body">
+                        <h5 class="card-title"><?php echo $row['cim']; ?></h5>
+                    </div>
+                </a>
+
             </div>
         </div>
         <?php
@@ -209,12 +230,33 @@ echo '</section>';
 <script>
     const btn = document.getElementById('btn');
     const search = document.getElementById('search');
-    const input = document.getElementById('input');
+    const input = document.getElementById('searchInput');
 
     btn.addEventListener('click',()=>{
     search.classList.toggle('activate')
     input.focus()
 })
+
+    
+    const resultsDiv = document.getElementById('searchResults');
+
+    input.addEventListener('keyup',function(){
+        const query =this.value.trim();
+
+        if(query.length < 2){
+            resultsDiv.innerHTML = '';
+            resultsDiv.style.display = 'none';
+            return;
+        }
+
+        fetch('search.php?q=' + encodeURIComponent(query))
+            .then(res=>res.text())
+            .then(data=>{
+                resultsDiv.innerHTML = data;
+                resultsDiv.style.display = 'block';
+            })
+    })
+
 </script>
 <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
 <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
